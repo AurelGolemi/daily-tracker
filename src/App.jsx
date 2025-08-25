@@ -1,61 +1,56 @@
-import { useState, useEffect } from 'react'
-// import reactLogo from './assets/react.svg'
-// import viteLogo from '/vite.svg'
+import { useState } from 'react'
 import './App.css'
+// import TaskList from './components/TaskList';
+// import AddTaskForm from './components/AddTaskForm';
+import useLocalStorage from './hooks/useLocalStorage';
+
+
 
 function App() {
-  // Tasks setup
-  const [tasks, setTasks] = useState([
-    // { id: 1, text: "Go to the gym", completed: false }
-  ]);
-  // const [newTask, setNewTask] = useState(['']);
+  const [tasks, setTasks] = useLocalStorage('tasks', []);
+  const [editingTask, setEditingTask] = useState(null);
 
-  // Load from localStorage
-  useEffect(() => {
-    const storedTasks = JSON.parse(localStorage.getItem("tasks")) || [];
-    setTasks(storedTasks);
-  }, []);
-
-  // Save to localStorage when tasks change
-  useEffect(() => {
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-  }, [tasks]);
-
-  // Adding tasks
-  const addTask = (text) => {
-    setTasks([...tasks, { id: Date.now(), text, completed: false }]);
+  const addTask = (task) => {
+    setTasks([...tasks, task]);
   };
 
-  addTask();
-
-  // Deleting tasks
   const deleteTask = (id) => {
     setTasks(tasks.filter(task => task.id !== id));
+  }
+
+  const toggleComplete = (id) => {
+    setTasks(tasks.map(task =>
+      task.id === id ? { ...task, completed: !task.completed } : task
+    ));
   };
 
-  deleteTask();
-
-  // Toggling tasks
-  const toggleTask = (id) => {
-    setTasks(
-      tasks.map(task =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    );
+  const updateTask = (updatedTask) => {
+    setTasks(tasks.map(task =>
+      task.id === updatedTask.id ? updatedTask : task
+    ));
+    setEditingTask(null);
   };
 
-  toggleTask();
+  return (
+    <div className="min-h-screen bg-gray-100 py-8">
+      <div className="max-w-md mx-auto bg-white rounded-lg shadow-md overflow-hidden p-6">
+        <h1 className="text-2xl font-bold text-gray-800 mb-6">Daily Tasks & Habits</h1>
+        <p>Welcome!!</p>
 
-  // Editing tasks
-  const editTask = (id, newText) => {
-    setTasks(
-      tasks.map(task =>
-        task.id === id ? { ...task, text: newText } : task
-      )
-    );
-  };
-
-  editTask();
+        <AddTaskForm
+          addTask={addTask}
+          editingTask={editingTask}
+          updateTask={updateTask}
+        />
+        <TaskList
+          tasks={tasks}
+          deleteTask={deleteTask}
+          toggleComplete={toggleComplete}
+          setEditingTask={setEditingTask}
+        />
+      </div>
+    </div>
+  );
 }
 
-export default App
+export default App;
