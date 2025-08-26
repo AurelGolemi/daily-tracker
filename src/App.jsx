@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import './App.css'
-// import TaskList from './components/TaskList';
-// import AddTaskForm from './components/AddTaskForm';
+import TaskItem from './components/TaskItem';
+import TaskList from './components/taskList';
+import AddTaskForm from './components/AddTaskForm';
 import useLocalStorage from './hooks/useLocalStorage';
 
 
