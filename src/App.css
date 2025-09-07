@@ -37,6 +37,282 @@
   padding: 2em;
 }
 
+h1 {
+  margin-bottom: 16px;
+}
+
+/* Progress Controls Styling */
+.progress-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  margin: 10px 0;
+}
+
+.checkbox-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #111;
+}
+
+.progress-checkbox {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ddd;
+  border-radius: 4px;
+  display: inline-block;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.progress-checkbox:checked + .checkmark {
+  background-color: #4caf50;
+  border-color: #4caf50;
+}
+
+.progress-checkbox:checked + .checkmark::after {
+  content: '✔';
+  color: #fff;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 14px;
+}
+
+.status {
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.status.completed {
+  background-color: #e8f5e8;
+  color: #2e7d32;
+}
+
+.status.pending {
+  background-color: #fff3e0;
+  color: #f57c00;
+}
+
+/* Circular Progress Styling */
+.circular-progress-container {
+  position: relative;
+  display: inline-block;
+}
+
+.circular-progress {
+  transform: rotate(0deg);
+  transition: transform 0.3s ease;
+}
+
+.progress-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.percentage-text {
+  font-weight: bold;
+  color: #333;
+}
+
+.progress-label {
+  color: #666;
+  margin-top: 4px;
+}
+
+/* Task Item Styling */
+.task-item {
+  border: 1px solid #e0e0e0;
+  padding: 20px;
+  margin: 15px 0;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transition: all 0.3s ease;
+}
+
+.task-item.completed {
+  background-color: #f8fff8;
+  border-color: #4caf50;
+}
+
+.task-header {
+  display: flex;
+  justify-content: between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.task-title {
+  margin: 0;
+  flex: 1;
+  color: #333;
+}
+
+.delete-btn {
+  background: #dc2c2c;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.delete-btn:hover {
+  background-color: #ff687f;
+}
+
+.task-progress-section {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin: 15px 0;
+}
+
+.weekly-progress-bars {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.day-progress {
+  text-align: center;
+}
+
+.day-label {
+  display: block;
+  font-size: 11px;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.day-progress-bar {
+  height: 30px;
+  background-color: #f0f0f0;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.day-progress-fill {
+  width: 100%;
+  transition: height 0.3s ease;
+  border-radius: 6px;
+}
+
+/* Loading states */
+.progress-controls.loading {
+  opacity: 0.7;
+}
+
+.skeleton-checkbox {
+  width: 20px;
+  height: 20px;
+  background: #ddd;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  width: 120px;
+  height: 16px;
+  background: #ddd;
+  border-radius: 4px;
+}
+
+/* Add|Toggle|Delete task styling */
+
+.add-task-form {
+  background: white;
+  padding: 25px;
+  margin-top: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.form-group {
+  margin-bottom: 15px;
+}
+
+.task-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: border-color 0.3s ease;
+}
+
+.task-input:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.task-textarea {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.3s ease;
+}
+
+.task-textarea:focus {
+  outline: none;
+  border-color: #2196f3;
+}
+
+.add-task-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.add-task-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+
+.add-task-btn:active {
+  transform: translateY(0);
+}
+
 .read-the-docs {
   color: #888;
 }
