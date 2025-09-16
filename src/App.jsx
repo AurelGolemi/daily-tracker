@@ -1,107 +1,328 @@
-import { useState, useEffect } from 'react'
-import useLocalStorage from './hooks/useLocalStorage';
-import ErrorBoundary from './components/ErrorBoundary';
-import TaskItem from './components/TaskItem';
-// import TaskList from './components/taskList';
-import AddTaskForm from './components/AddTaskForm';
-import CircularProgress from './components/CircularProgress';
-// import ProgressControls from './components/ProgressControls';
-import './App.css'
+import { useState, useEffect, useCallback } from "react";
+import useLocalStorage from "./hooks/useLocalStorage";
+import ErrorBoundary from "./components/ErrorBoundary";
+import TaskList from './components/taskList';
+import AddTaskForm from "./components/AddTaskForm";
+import CircularProgress from "./components/CircularProgress";
+import { getTodayDateString } from "./utils/dateUtils";
+import './App.css';
 
 function App() {
-  const [tasks, setTasks] = useLocalStorage('tasks', []);
+  const [tasks, setTasks] = useLocalStorage("tasks", []);
   const [overallProgress, setOverallProgress] = useState(0);
+  const [editingTask, setEditingTask] = useState(null);
+
+  // Initialize app
+  useEffect(() => {
+    try {
+      const lastVisit = localStorage.getItem("lastVisit");
+      const today = getTodayDateString();
+
+      if (lastVisit !== today) {
+        localStorage.setItem("lastVisit", today);
+      }
+      
+      console.log('App initialized successfully');
+    } catch (error) {
+      console.error('Error during app initialization:', error);
+    }
+  }, []);
 
   // Calculate overall progress
   useEffect(() => {
-    if (tasks.length === 0) {
-      setOverallProgress(0);
-      return;
-    }
+    try {
+      if (!tasks || tasks.length === 0) {
+        setOverallProgress(0);
+        return;
+      }
 
-    const completedTasks = tasks.filter(task => task.completed).length;
-    const progress = (completedTasks / tasks.length) * 100;
-    setOverallProgress(progress);
+      const today = getTodayDateString();
+      const completedToday = tasks.filter(
+        (task) => {
+          return task?.completions && 
+                 Array.isArray(task.completions) && 
+                 task.completions.includes(today);
+        }
+      ).length;
+
+      console.log('Completed today:', completedToday, 'Total tasks:', tasks.length);
+
+      const progress = tasks.length > 0 ? (completedToday / tasks.length) * 100 : 0;
+      setOverallProgress(progress);
+    } catch (error) {
+      console.error('Error calculating progress:', error);
+      setOverallProgress(0);
+    }
   }, [tasks]);
 
-  const addTask = (newTask) => {
-    const taskWithDefaults = { 
-      ...newTask, 
-      id: Date.now(), 
-      completed: false,
-      dailyProgress: {
-        Monday: false,
-        Tuesday: false,
-        Wednesday: false,
-        Thursday: false,
-        Friday: false,
-        Saturday: false,
-        Sunday: false
-      },
-      createdAt: newTask.createdAt || new Date().toISOString()
-    };
+  // Define all functions using useCallback to prevent re-creation
+  const addTask = useCallback((taskData) => {
+    try {
+      console.log('addTask called with:', taskData);
+      
+      if (!taskData || !taskData.text?.trim()) {
+        console.warn('Invalid task data provided to addTask');
+        return;
+      }
 
-    setTasks(prev => [...prev, taskWithDefaults]);
-  };
+      const newTask = {
+        id: Date.now() + Math.random(),
+        text: taskData.text.trim(),
+        description: taskData.description?.trim() || '',
+        completions: [],
+        streak: 0,
+        lastCompleted: null,
+        createdAt: new Date().toISOString(),
+      };
 
-  const toggleComplete = (taskId) => {
-    setTasks(prev => prev.map(task => 
-      task.id === taskId 
-        ? { ...task, completed: !task.completed }
-        : task
-    ));
-  };
+      setTasks((prev) => {
+        const updated = [...prev, newTask];
+        console.log('Tasks updated after add:', updated.length);
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error adding task:', error);
+    }
+  }, [setTasks]);
 
-  const deleteTask = (taskId) => {
-    setTasks(prev => prev.filter(task => task.id !== taskId));
-  };
+  const editTask = useCallback((task) => {
+    try {
+      console.log('editTask called with:', task);
+      
+      if (!task || !task.id) {
+        console.error('Invalid task provided to editTask:', task);
+        return;
+      }
 
-  // const updateDailyProgress = (taskId, day, completed) => {
-  //   setTasks(prev => prev.map(task => 
-  //     task.id === taskId 
-  //       ? { 
-  //           ...task, 
-  //           dailyProgress: { 
-  //             ...task.dailyProgress, 
-  //             [day]: completed 
-  //           } 
-  //         }
-  //       : task
-  //   ));
-  // };
+      setEditingTask(task);
+    } catch (error) {
+      console.error('Error editing task:', error);
+    }
+  }, []);
+
+  const updateTask = useCallback((taskId, updatedData) => {
+    try {
+      console.log('updateTask called with:', { taskId, updatedData });
+      
+      if (!taskId || !updatedData) {
+        console.error('Invalid parameters for updateTask:', { taskId, updatedData });
+        return;
+      }
+
+      setTasks((prevTasks) => {
+        const updated = prevTasks.map((task) => {
+          if (task.id === taskId) {
+            return {
+              ...task,
+              text: updatedData.text?.trim() || task.text,
+              description: updatedData.description?.trim() || task.description || '',
+              updatedAt: new Date().toISOString(),
+            };
+          }
+          return task;
+        });
+        console.log('Tasks updated after edit:', updated.length);
+        return updated;
+      });
+
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Error updating task:', error);
+    }
+  }, [setTasks]);
+
+  const cancelEdit = useCallback(() => {
+    try {
+      console.log('cancelEdit called');
+      setEditingTask(null);
+    } catch (error) {
+      console.error('Error canceling edit:', error);
+    }
+  }, []);
+
+  const toggleComplete = useCallback((taskId) => {
+    try {
+      console.log('toggleComplete called with taskId:', taskId);
+      
+      if (!taskId) {
+        console.error('No taskId provided to toggleComplete');
+        return;
+      }
+
+      setTasks((prevTasks) => {
+        const updated = prevTasks.map((task) => {
+          if (task.id === taskId) {
+            const today = getTodayDateString();
+            const completions = task.completions || [];
+            const alreadyCompletedToday = completions.includes(today);
+
+            console.log('Toggling task:', {
+              taskId,
+              alreadyCompletedToday,
+              currentCompletions: completions
+            });
+
+            let newCompletions;
+            let newStreak;
+
+            if (alreadyCompletedToday) {
+              newCompletions = completions.filter((date) => date !== today);
+              newStreak = Math.max(0, (task.streak || 0) - 1);
+            } else {
+              newCompletions = [...completions, today];
+              newStreak = (task.streak || 0) + 1;
+            }
+
+            const updatedTask = {
+              ...task,
+              completions: newCompletions,
+              streak: newStreak,
+              lastCompleted: alreadyCompletedToday ? null : new Date().toISOString(),
+              completed: !alreadyCompletedToday,
+            };
+
+            console.log('Task after toggle:', updatedTask);
+            return updatedTask;
+          }
+          return task;
+        });
+        
+        console.log('All tasks after toggle:', updated.length);
+        return updated;
+      });
+    } catch (error) {
+      console.error('Error toggling task completion:', error);
+    }
+  }, [setTasks]);
+
+  const deleteTask = useCallback((taskId) => {
+    try {
+      console.log('deleteTask called with taskId:', taskId);
+      
+      if (!taskId) {
+        console.error('No taskId provided to deleteTask');
+        return;
+      }
+
+      const confirmed = window.confirm('Are you sure you want to delete this task?');
+      if (confirmed) {
+        setTasks((prev) => {
+          const updated = prev.filter((task) => task.id !== taskId);
+          console.log('Tasks after delete:', updated.length);
+          return updated;
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+    }
+  }, [setTasks]);
+
+  // Handle edit form submission
+  const handleEditSubmit = useCallback((updatedData) => {
+    if (editingTask) {
+      updateTask(editingTask.id, updatedData);
+    }
+  }, [editingTask, updateTask]);
+
+  // Debug logging
+  console.log('App render - Function types:', {
+    addTask: typeof addTask,
+    editTask: typeof editTask,
+    updateTask: typeof updateTask,
+    toggleComplete: typeof toggleComplete,
+    deleteTask: typeof deleteTask
+  });
 
   return (
     <ErrorBoundary>
-      <div className="app-container">
-        <header className="app-header">
-          <h1>Weekly Task Progress</h1>
-          <div className="overall-progress">
-            <CircularProgress 
-              percentage={overallProgress} 
-              size={120}
-              strokeWidth={12}
-              label="Overall Completion"
+      <div className="app-container py-8 min-h-screen bg-gray-50">
+        <header className="app-header text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-800 mb-4">
+            Daily Task Tracker
+          </h1>
+          <div className="overall-progress flex flex-col items-center justify-center">
+            <CircularProgress
+              completed={Math.round(overallProgress)}
+              total={100}
+              size={100}
+              strokeWidth={8}
             />
+            <p className="text-gray-600 mt-3 text-lg font-medium">
+              {Math.round(overallProgress)}% of tasks completed today
+            </p>
           </div>
         </header>
 
-        <main className="app-main">
-          <AddTaskForm onAddTask={addTask} />
-          
-          <div className="tasks-container">
-            {tasks.length === 0 ? (
-              <p className="no-tasks">No tasks yet. Add your first task!</p>
-            ) : (
-              tasks.map(task => (
-                <TaskItem
-                  key={task.id}
-                  task={task}
-                  onToggleComplete={toggleComplete}
-                  onDelete={deleteTask}
-                />
-              ))
-            )}
-          </div>
+        <main className="app-main max-w-4xl mx-auto px-4">
+          {/* Edit Form */}
+          {editingTask ? (
+            <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h2 className="text-lg font-semibold text-blue-800 mb-3">
+                Edit Task: {editingTask.text}
+              </h2>
+              <AddTaskForm
+                onAddTask={handleEditSubmit}
+                onCancel={cancelEdit}
+                initialData={{
+                  text: editingTask.text,
+                  description: editingTask.description || '',
+                }}
+                isEditing={true}
+              />
+            </div>
+          ) : (
+            <div className="mb-6">
+              <AddTaskForm onAddTask={addTask} />
+            </div>
+          )}
+
+          {/* Task Statistics */}
+          {tasks.length > 0 && (
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h2 className="text-lg font-semibold text-gray-800 mb-2">
+                Task Overview
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="font-medium">Total Tasks:</span> {tasks.length}
+                </div>
+                <div>
+                  <span className="font-medium">Completed Today:</span>{' '}
+                  {tasks.filter(task => 
+                    task?.completions?.includes(getTodayDateString())
+                  ).length}
+                </div>
+                <div>
+                  <span className="font-medium">Pending:</span>{' '}
+                  {tasks.filter(task => 
+                    !task?.completions?.includes(getTodayDateString())
+                  ).length}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Task List */}
+          {tasks.length > 0 ? (
+            <TaskList
+              tasks={tasks}
+              onToggleComplete={toggleComplete}
+              onDelete={deleteTask}
+              onEdit={editTask}
+            />
+          ) : (
+            <div className="text-center py-12">
+              <div className="bg-white rounded-lg shadow-sm border p-8">
+                <div className="text-gray-400 text-6xl mb-4">📝</div>
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  No tasks yet
+                </h3>
+                <p className="text-gray-500">
+                  Add your first task above to get started with tracking your daily progress!
+                </p>
+              </div>
+            </div>
+          )}
         </main>
       </div>
     </ErrorBoundary>
@@ -109,6 +330,52 @@ function App() {
 }
 
 export default App;
+
+// setTasks((prev) => [...prev, newTask]);
+  // const toggleComplete = (taskId) => {
+  //   setTasks(
+  //     tasks.map((task) => {
+  //       if (task.id === taskId) {
+  //         const today = getTodayDateString();
+  //         const alreadyCompletedToday =
+  //           task.completions && task.completions.includes(today);
+
+  //         let newCompletions;
+  //         let newStreak;
+
+  //         if (alreadyCompletedToday) {
+  //           // Remove today's completion
+  //           newCompletions = task.completions.filter((date) => date !== today);
+  //           newStreak = Math.max(0, task.streak - 1);
+  //         } else {
+  //           // Add today's completion
+  //           newCompletions = [...(task.completions || []), today];
+  //           newStreak = (task.streak || 0) + 1;
+  //         }
+
+  //         return {
+  //           ...task,
+  //           completions: newCompletions,
+  //           streak: newStreak,
+  //           lastCompleted: alreadyCompletedToday
+  //             ? null
+  //             : new Date().toISOString(), // Fixed: added parentheses
+  //           completed: !alreadyCompletedToday,
+  //         };
+  //       }
+  //       return task;
+  //     })
+  //   );
+  // }; // Fixed: Removed extra closing brace and semicolon
+
+  // const deleteTask = (taskId) => {
+  //   setTasks((prev) => prev.filter((task) => task.id !== taskId));
+  // };
+
+
+
+
+
 
 // function App() {
 //   const [tasks, setTasks] = useLocalStorage('tasks', []);
@@ -157,8 +424,6 @@ export default App;
 //     ));
 //     setEditingTask(null);
 //   };
-
-  
 
 //   return (
 //     <div className="min-h-screen bg-gray-100 py-8">

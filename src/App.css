@@ -227,6 +227,10 @@ h1 {
   border-radius: 6px;
 }
 
+.day-progress-fill:active {
+  background-color: #aaffaa;
+}
+
 /* Loading states */
 .progress-controls.loading {
   opacity: 0.7;
