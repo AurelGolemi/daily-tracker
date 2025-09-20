@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import CircularProgress from "./CircularProgress";
 import ProgressControls from "./ProgressControls";
 import { isToday, getTodayDateString } from "../utils/dateUtils";
@@ -9,39 +9,24 @@ export default function TaskItem({
   onToggleComplete,
   onEdit,
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task?.text || '');
+  const [editDescription, setEditDescription] = useState(task?.description || '');
 
-  // Debug logging to verify functions are received
-  console.log('TaskItem received props:', {
-    taskId: task?.id,
-    onToggleCompleteType: typeof onToggleComplete,
-    onDeleteType: typeof onDelete,
-    onEditType: typeof onEdit
-  });
-
-  // Safety checks for every prop
+  // Add safety checks for all props
   if (!task) {
     console.warn('TaskItem: No task prop provided');
     return <div className="text-red-500 p-4">Invalid task data</div>;
   }
-
-  // Verify functions
-  const functionsValid = {
-    onToggleComplete: typeof onToggleComplete === 'function',
-    onDelete: typeof onDelete === 'function',
-    onEdit: typeof onEdit === 'function'
-  };
-
-  console.log('TaskItem function validation:', functionsValid);
 
   const taskText = task?.text || 'Unnamed Task';
   const taskCompletions = task?.completions || [];
   const taskStreak = task?.streak || 0;
 
   const today = getTodayDateString();
-
-  // Check if task is completed today
   const completions = task.completions || [];
-  const completedToday = completions.some((completionDate) => isToday(completionDate)
+  const completedToday = completions.some((completionDate) =>
+    isToday(completionDate)
   );
 
   // Calculate progress for circular bar (7-day week)
@@ -51,15 +36,11 @@ export default function TaskItem({
   const weeklyCompletions = taskCompletions.filter((completionDate) => {
     try {
       const date = new Date(completionDate);
-      return date >= oneWeekAgo;
-      // const completionDate = new Date(date);
-      // const weekAgo = new Date();
-      // weekAgo.setDate(weekAgo.getDate() - 7);
+      return date >= oneWeekAgo && !isNaN(date.getTime());
     } catch (error) {
-      console.warn('Invalid date in completions:', completionDate, error);
+      console.warn('Invalid date in completions:', completionDate);
       return false;
     }
-    
   });
 
   const weeklyProgress = {
@@ -67,67 +48,120 @@ export default function TaskItem({
     total: 7
   };
 
-  // Safe edit handler
-  const handleEdit = (e) => {
+  // Handle starting edit mode
+  const handleStartEdit = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('TaskItem: Edit button clicked for task:', task.id);
+    setIsEditing(true);
+    setEditTitle(task.text);
+    setEditDescription(task.description || '');
+  };
 
-    if (functionsValid.onEdit) {
-      try {
-        onEdit(task);
-        console.log('TaskItem: onEdit called succesfully');
-      } catch (error) {
-        console.error('TaskItem: Error calling onEdit', error);
-      }
-    } else {
-      console.error('TaskItem: onEdit is not a function:', typeof onEdit);
-      alert('Edit functionality is not available. Please check the console for errors!');
+  // Handle saving edits
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!editTitle.trim()) {
+      alert('Task title cannot be empty');
+      return;
+    }
+
+    // Call the onEdit function with updated data
+    if (typeof onEdit === 'function') {
+      // Create updated task object
+      const updatedTask = {
+        ...task,
+        text: editTitle.trim(),
+        description: editDescription.trim()
+      };
+      
+      onEdit(updatedTask);
+      setIsEditing(false);
     }
   };
 
+  // Handle canceling edit
+  const handleCancelEdit = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsEditing(false);
+    setEditTitle(task.text);
+    setEditDescription(task.description || '');
+  };
+
+  // Handle key presses during editing
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSaveEdit(e);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      handleCancelEdit(e);
+    }
+  };
+
+  // Safe delete handler
   const handleDelete = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('TaskItem: Delete button clicked for task:', task.id);
-
-    if (functionsValid.onDelete) {
-      const confirmed = window.confirm('Are you sure you want to delete the task?');
+    
+    if (typeof onDelete === 'function') {
+      const confirmed = window.confirm('Are you sure you want to delete this task?');
       if (confirmed) {
-        try {
-          onDelete(task.id);
-          console.log('TaskItem: onDelete called successfully');
-        } catch (error) {
-          console.error('TaskItem: Error calling onDelete', error);
-        }
+        onDelete(task.id);
       }
-    } else {
-      console.error('TaskItem: onDelete is not a function:', typeof onDelete);
-      alert('Delete functionality is not available. Please check the console for errors!');
     }
-  }
+  };
 
   // Safe toggle handler
   const handleToggleComplete = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('TaskItem: Toggle complete clicked for task:', task.id);
-
-    if (functionsValid.onToggleComplete) {
-      try {
-        onToggleComplete(task.id);
-        console.log('TaskItem: onToggleComplete called successfully');
-      } catch (error) {
-        console.error('TaskItem: Error calling onToggleComplete:', error);
-      }
-    } else {
-      console.error('TaskItem: onToggleComplete is not a function:', typeof onToggleComplete);
-      alert('Toggle complete functionality is not available. Please check the console for errors!');
+    
+    if (typeof onToggleComplete === 'function') {
+      onToggleComplete(task.id);
     }
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-shadow">
+    <div 
+      className={`bg-white rounded-lg shadow-sm border p-4 hover:shadow-md transition-all duration-300 text-gray-900 ${
+        isEditing ? 'ring-2 ring-blue-500 bg-blue-50' : ''
+      } ${
+        completedToday ? 'bg-green-50 border-green-200' : ''
+      }`}
+      style={{
+        background: isEditing 
+          ? 'rgba(59, 130, 246, 0.3)' 
+          : completedToday 
+            ? 'rgba(34, 197, 94, 0.05)' 
+            : 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(8px)',
+        border: isEditing 
+          ? '2px solid #3b82f6' 
+          : completedToday 
+            ? '1px solid #22c55e' 
+            : '1px solid rgba(255, 255, 255, 0.3)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08)'
+      }}
+    >
+      {/* Edit Mode Indicator */}
+      {isEditing && (
+        <div style={{
+          background: '#3b82f6',
+          color: '#111',
+          padding: '4px 12px',
+          borderRadius: '12px',
+          fontSize: '12px',
+          fontWeight: '600',
+          marginBottom: '12px',
+          display: 'inline-block'
+        }}>
+          Editing Mode - Press Enter to save, Esc to cancel
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4 flex-1">
           {/* Checkbox */}
@@ -136,9 +170,10 @@ export default function TaskItem({
             checked={completedToday}
             onChange={handleToggleComplete}
             className="h-5 w-5 text-blue-500 rounded focus:ring-blue-400 cursor-pointer"
+            disabled={isEditing}
           />
 
-          {/*Circular Progress*/}
+          {/* Circular Progress */}
           <CircularProgress
             completed={weeklyProgress.completed}
             total={weeklyProgress.total}
@@ -146,25 +181,95 @@ export default function TaskItem({
             strokeWidth={4}
           />
 
-          {/*Task Info*/}
+          {/* Task Info */}
           <div className="flex-1 min-w-0">
-            <span className={`text-gray-800 font-medium ${completedToday ? 'line-through text-gray-400' : ''}`}>
-              {taskText}
-            </span>
-
-            {/* Show Description */}
-            {task?.description && (
-              <p className="text-sm text-gray-600 mt-1">{task.description}</p>
+            {/* Task Title - Editable */}
+            {isEditing ? (
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="w-full text-lg font-medium border-2 border-blue-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                style={{
+                  background: 'white',
+                  fontSize: '1.1rem',
+                  fontWeight: '600'
+                }}
+                autoFocus
+                placeholder="Enter task title..."
+              />
+            ) : (
+              <span 
+                className={`text-gray-800 font-medium cursor-pointer hover:text-blue-600 ${
+                  completedToday ? 'line-through text-gray-400' : ''
+                }`}
+                onClick={handleStartEdit}
+                style={{
+                  fontSize: '1.1rem',
+                  fontWeight: '600',
+                  display: 'block',
+                  padding: '4px',
+                  borderRadius: '4px',
+                  transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={(e) => {
+                  if (!completedToday) {
+                    e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.background = 'transparent';
+                }}
+              >
+                {taskText}
+              </span>
             )}
 
-            {/*Progress Stats */}
+            {/* Task Description - Editable */}
+            {isEditing ? (
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                onKeyDown={handleKeyPress}
+                className="w-full text-sm text-gray-600 mt-2 border-2 border-blue-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500"
+                style={{
+                  background: 'white',
+                  minHeight: '60px',
+                  resize: 'vertical'
+                }}
+                placeholder="Enter task description (optional)..."
+              />
+            ) : (
+              task?.description && (
+                <p 
+                  className="text-sm text-gray-600 mt-1 cursor-pointer hover:text-blue-600"
+                  onClick={handleStartEdit}
+                  style={{
+                    padding: '4px',
+                    borderRadius: '4px',
+                    transition: 'all 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'rgba(59, 130, 246, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'transparent';
+                  }}
+                >
+                  {task.description}
+                </p>
+              )
+            )}
+
+            {/* Progress Stats */}
             <div className="mt-2 space-y-1">
               <p className="text-xs text-gray-600">
                 <span className="font-medium">Today:</span>
-                {completedToday ? '✔ Completed' : '⏳ Pending'}
+                {completedToday ? ' ✔ Completed' : ' ⏳ Pending'}
               </p>
               <p className="text-xs text-gray-600">
-                <span className="font-medium">Streak:</span> {taskStreak} days.
+                <span className="font-medium">Streak:</span> {taskStreak} days
               </p>
               <p className="text-xs text-gray-600">
                 <span className="font-medium">This week:</span> {weeklyProgress.completed}/7 days
@@ -175,45 +280,71 @@ export default function TaskItem({
 
         {/* Action Buttons */}
         <div className="flex flex-col space-y-2 ml-4">
-          <button
-            onClick={handleEdit}
-            disabled={!functionsValid.onEdit}
-            className={`px-3 py-1 bg-blue-100 text-blue-700 rounded text-sm font-medium hover:bg-blue-200 transition-colors ${functionsValid.onEdit ? 'bg-blue-100 text-blue-700 hover:bg-blue-200 cursor-pointer' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-            type="button"
-          >
-            Edit
-          </button>
-          <button
-            onClick={handleDelete}
-            disabled={!functionsValid.onDelete}
-            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
-              functionsValid.onDelete
-                ? 'bg-red-100 text-red-700 hover:bg-red-200 cursor-pointer'
-                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-            }`}
-            type="button"
-          >
-            Delete
-          </button>
+          {isEditing ? (
+            // Edit Mode Buttons
+            <div className="flex space-x-2">
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 transition-colors"
+                style={{
+                  background: 'linear-gradient(135deg, #10b981, #059669)',
+                  boxShadow: '0 4px 12px rgba(16, 185, 129, 0.4)',
+                  cursor: 'pointer'
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg text-sm font-medium hover:bg-gray-600 transition-colors"
+                style={{
+                  background: 'linear-gradient(135deg, #6b7280, #4b5563)',
+                  boxShadow: '0 4px 12px rgba(107, 114, 128, 0.4)',
+                  cursor: 'pointer'
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            // Normal Mode Buttons
+            <>
+              <button
+                onClick={handleStartEdit}
+                className="px-4 py-2 bg-blue-100 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors"
+                style={{
+                  background: 'linear-gradient(135deg, #dbeafe, #bfdbfe)',
+                  padding: '12px 16px',
+                  boxShadow: '0 4px 12px rgba(59, 130, 246, 0.2)',
+                  cursor: 'pointer'
+                }}
+              >
+                Edit
+              </button>
+              <button
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-100 text-red-700 rounded-lg text-sm font-medium hover:bg-red-200 transition-colors"
+                style={{
+                  background: 'linear-gradient(135deg, #fee2e2, #fecaca)',
+                  padding: '12px 16px',
+                  boxShadow: '0 4px 12px rgba(239, 68, 68, 0.2)',
+                  cursor: 'pointer'
+                }}
+              >
+                Delete
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Progress Controls */}
-      {task && functionsValid.onToggleComplete && (
+      {task && !isEditing && (
         <div className="mt-3 pt-3 border-t">
           <ProgressControls
             task={task}
             onToggleComplete={onToggleComplete}
           />
-        </div>
-      )};
-
-      {/* Show error message if functions are missing */}
-      {(!functionsValid.onToggleComplete || !functionsValid.onEdit || !functionsValid.onDelete) && (
-        <div className="mt-3 pt-3 border-t bg-red-50 p-2 rounded">
-          <p className="text-red-600 text-sm font-medium">
-            ⚠ Some functionality is unavailable. Check console for details!
-          </p>
         </div>
       )}
     </div>
