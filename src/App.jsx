@@ -256,7 +256,7 @@ function App() {
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text'
             }}>
-              Daily Task Tracker
+              Daily Tracker
             </h1>
             
             <p style={{
